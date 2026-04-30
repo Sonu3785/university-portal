@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useReminderNotifications } from '../hooks/useReminderNotifications'
+import NotificationBell from './NotificationBell'
 import {
   LayoutDashboard, CalendarDays, ClipboardList,
   BarChart3, FileText, Bell, LogOut, ShieldCheck, BookMarked
@@ -99,9 +100,25 @@ export default function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <Outlet />
-      </main>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+          <p className="text-sm text-slate-500">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

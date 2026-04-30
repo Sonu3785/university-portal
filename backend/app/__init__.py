@@ -49,6 +49,7 @@ def create_app():
     from app.routes.admin import admin_bp
     from app.routes.reminder import reminder_bp
     from app.routes.marks import marks_bp
+    from app.routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(timetable_bp, url_prefix="/api/timetable")
@@ -59,6 +60,7 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix="/api/admin")
     app.register_blueprint(reminder_bp, url_prefix="/api/reminder")
     app.register_blueprint(marks_bp, url_prefix="/api/marks")
+    app.register_blueprint(notifications_bp, url_prefix="/api/notifications")
 
     with app.app_context():
         db.create_all()

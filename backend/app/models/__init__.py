@@ -7,3 +7,4 @@ from app.models.leave import LeaveRequest
 from app.models.extra_lecture import ExtraLecture
 from app.models.reminder_setting import ReminderSetting
 from app.models.marks import StudentMarks
+from app.models.notification import Notification

@@ -69,6 +69,17 @@ def leave_action(leave_id):
     # Send email notification to faculty
     faculty = User.query.get(leave.faculty_id)
     if faculty:
+        # Create in-app notification
+        from app.models.notification import Notification
+        notif = Notification(
+            user_id=faculty.id,
+            title=f"Leave Request {'Approved ✅' if action == 'approved' else 'Rejected ❌'}",
+            message=f"Your leave from {leave.from_date} to {leave.to_date} has been {action}. {('Remark: ' + remark) if remark else ''}",
+            type="leave"
+        )
+        db.session.add(notif)
+        db.session.commit()
+
         try:
             status_text = "Approved ✅" if action == "approved" else "Rejected ❌"
             msg = Message(
