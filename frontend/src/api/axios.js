@@ -1,7 +1,10 @@
 import axios from 'axios'
 
+// Use environment variable in production, proxy in development
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' }
 })
 
