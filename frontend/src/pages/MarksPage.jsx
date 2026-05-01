@@ -84,10 +84,10 @@ export default function MarksPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">CA / TA Marks Entry</h1>
-        <p className="text-slate-500 mt-1">Continuous Assessment + Term Assessment + Final Exam</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">CA / TA Marks Entry</h1>
+        <p className="text-slate-500 mt-1 text-sm">Continuous Assessment + Term Assessment + Final Exam</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6">
@@ -104,7 +104,7 @@ export default function MarksPage() {
       {selectedSubject && (
         <>
           {summary && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
               <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-5 text-white shadow-lg">
                 <p className="text-xs opacity-80 mb-1">Class Avg (Internal)</p>
                 <p className="text-3xl font-bold">{summary.avg_total}<span className="text-lg opacity-80">/50</span></p>

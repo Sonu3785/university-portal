@@ -38,15 +38,15 @@ export default function LeavePage() {
   })
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex items-start sm:items-center justify-between mb-6 sm:mb-8 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Leave Requests</h1>
-          <p className="text-slate-500 mt-1">Apply and track your leave applications</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Leave Requests</h1>
+          <p className="text-slate-500 mt-1 text-sm">Apply and track your leave applications</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
         >
           <Plus size={16} /> Apply Leave
         </button>

@@ -68,14 +68,14 @@ export default function AttendancePage() {
   const absentCount = Object.values(attendance).filter(v => v === 'absent').length
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Attendance</h1>
-        <p className="text-slate-500 mt-1">Mark attendance for your classes</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Attendance</h1>
+        <p className="text-slate-500 mt-1 text-sm">Mark attendance for your classes</p>
       </div>
 
       {/* Controls */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 mb-6 flex flex-wrap gap-4 items-end">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 mb-6 flex flex-wrap gap-4 items-end">
         <div className="flex-1 min-w-[200px]">
           <label className="text-xs font-medium text-slate-600 mb-1.5 block">Subject</label>
           <select
@@ -120,13 +120,13 @@ export default function AttendancePage() {
             </div>
           )}
 
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto mb-5">
             {loadingStudents ? (
               <p className="p-6 text-slate-400 text-sm">Loading students...</p>
             ) : students.length === 0 ? (
               <p className="p-6 text-slate-400 text-sm">No students enrolled in this subject.</p>
             ) : (
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[400px]">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide w-8">#</th>

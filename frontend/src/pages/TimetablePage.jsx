@@ -88,15 +88,15 @@ export default function TimetablePage() {
   const hasAnySlot = DAYS.some(day => (timetable[day] || []).length > 0)
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-5 sm:mb-6 gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Timetable</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Timetable</h1>
           <p className="text-slate-500 mt-1 text-sm">MIT-ADT University — Weekly Schedule</p>
         </div>
         <button onClick={() => setShowExtraForm(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors">
-          <Plus size={16} /> Add Extra Lecture
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap">
+          <Plus size={16} /> <span className="hidden sm:inline">Add Extra Lecture</span><span className="sm:hidden">Add Extra</span>
         </button>
       </div>
 
@@ -176,8 +176,8 @@ export default function TimetablePage() {
       {extras.length > 0 && (
         <div className="mt-8">
           <h2 className="text-lg font-semibold text-slate-700 mb-4">Extra Lectures</h2>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
                   {["Date", "Subject", "Time", "Room", "Note"].map(h => (

@@ -9,15 +9,15 @@ const TABS = ["Faculty", "Subjects", "Timetable Upload", "Student Upload", "Leav
 export default function AdminPage() {
   const [tab, setTab] = useState("Faculty")
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Admin Panel</h1>
-        <p className="text-slate-500 mt-1">Manage faculty, subjects, timetable and approvals</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Admin Panel</h1>
+        <p className="text-slate-500 mt-1 text-sm">Manage faculty, subjects, timetable and approvals</p>
       </div>
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 overflow-x-auto">
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
           <button key={t} onClick={() => setTab(t)}
-            className={"px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors " + (tab === t ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
+            className={"px-3 sm:px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors " + (tab === t ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700")}>
             {t}
           </button>
         ))}
@@ -86,7 +86,7 @@ function FacultyTab() {
         </button>
       </div>
       {showForm && (
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-2 gap-4">
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[{label:"Full Name",key:"name",type:"text"},{label:"Email",key:"email",type:"email"},{label:"Password",key:"password",type:"password"},{label:"Department",key:"department",type:"text"},{label:"Phone",key:"phone",type:"text"}].map(({ label, key, type }) => (
             <div key={key}>
               <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
@@ -100,9 +100,9 @@ function FacultyTab() {
           </div>
         </div>
       )}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
         {isLoading ? <p className="p-5 text-slate-400 text-sm">Loading...</p> : faculty.length === 0 ? <p className="p-5 text-slate-400 text-sm">No faculty added yet.</p> : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>{["Name","Email","Department","Phone","Status","Action"].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>)}</tr>
             </thead>
@@ -165,7 +165,7 @@ function SubjectsTab() {
         </button>
       </div>
       {showForm && (
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-2 gap-4">
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[{label:"Subject Name",key:"name",type:"text"},{label:"Subject Code",key:"code",type:"text"},{label:"Semester",key:"semester",type:"number"},{label:"Branch",key:"branch",type:"text"}].map(({ label, key, type }) => (
             <div key={key}>
               <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
@@ -186,9 +186,9 @@ function SubjectsTab() {
           </div>
         </div>
       )}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
         {isLoading ? <p className="p-5 text-slate-400 text-sm">Loading...</p> : subjects.length === 0 ? <p className="p-5 text-slate-400 text-sm">No subjects added yet.</p> : (
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[550px]">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>{["Code","Name","Semester","Branch","Faculty","Action"].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>)}</tr>
             </thead>
@@ -354,10 +354,10 @@ function LeaveApprovalsTab() {
                       </div>
                       <span className="text-xs text-slate-400">{new Date(leave.applied_at).toLocaleDateString()}</span>
                     </div>
-                    <div className="flex gap-3 items-center">
-                      <input type="text" placeholder="Add remark (optional)" value={remark[leave.id] || ""} onChange={e => setRemark({ ...remark, [leave.id]: e.target.value })} className="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "approved" })} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-semibold"><CheckCircle size={14} /> Approve</button>
-                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "rejected" })} className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-sm font-semibold"><XCircle size={14} /> Reject</button>
+                    <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+                      <input type="text" placeholder="Add remark (optional)" value={remark[leave.id] || ""} onChange={e => setRemark({ ...remark, [leave.id]: e.target.value })} className="flex-1 min-w-[140px] border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "approved" })} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold"><CheckCircle size={14} /> Approve</button>
+                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "rejected" })} className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold"><XCircle size={14} /> Reject</button>
                     </div>
                   </div>
                 ))}
@@ -367,8 +367,8 @@ function LeaveApprovalsTab() {
           {others.length > 0 && (
             <div>
               <h3 className="text-sm font-semibold text-slate-500 mb-3">Past Requests</h3>
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-sm min-w-[550px]">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>{["Faculty","Dates","Reason","Status","Remark"].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>)}</tr>
                   </thead>
