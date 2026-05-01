@@ -19,10 +19,20 @@ def create_app():
     # Config
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "jwt-secret")
-    app.config["SQLALCHEMY_DATABASE_URI"] = (
-        f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
-        f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', 3306)}/{os.getenv('DB_NAME')}"
-    )
+
+    # Build DB URI — support full DATABASE_URL or individual parts
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Railway sometimes provides full URL
+        if database_url.startswith("mysql://"):
+            database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
+        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+    else:
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
+            f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', 3306)}/{os.getenv('DB_NAME')}"
+            f"?ssl_disabled=true"
+        )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     # Mail config
