@@ -73,13 +73,41 @@ def update_faculty(faculty_id):
 @admin_required
 def delete_faculty(faculty_id):
     user = User.query.get_or_404(faculty_id)
-    # Delete all subjects assigned to this faculty (cascade handles rest)
-    subjects = Subject.query.filter_by(faculty_id=faculty_id).all()
-    for subject in subjects:
-        db.session.delete(subject)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({"message": f"Faculty '{user.name}' and their subjects deleted successfully"}), 200
+    name = user.name
+    try:
+        from app.models.timetable import TimetableSlot
+        from app.models.extra_lecture import ExtraLecture
+        from app.models.leave import LeaveRequest
+        from app.models.reminder_setting import ReminderSetting
+        from app.models.marks import StudentMarks
+        from app.models.attendance import Attendance
+        from app.models.notification import Notification
+        from app.models.subject import subject_students
+
+        subjects = Subject.query.filter_by(faculty_id=faculty_id).all()
+        for subject in subjects:
+            Attendance.query.filter_by(subject_id=subject.id).delete()
+            StudentMarks.query.filter_by(subject_id=subject.id).delete()
+            TimetableSlot.query.filter_by(subject_id=subject.id).delete()
+            db.session.execute(
+                subject_students.delete().where(subject_students.c.subject_id == subject.id)
+            )
+            db.session.delete(subject)
+
+        TimetableSlot.query.filter_by(faculty_id=faculty_id).delete()
+        ExtraLecture.query.filter_by(faculty_id=faculty_id).delete()
+        LeaveRequest.query.filter_by(faculty_id=faculty_id).delete()
+        ReminderSetting.query.filter_by(faculty_id=faculty_id).delete()
+        StudentMarks.query.filter_by(faculty_id=faculty_id).delete()
+        Attendance.query.filter_by(faculty_id=faculty_id).delete()
+        Notification.query.filter_by(user_id=faculty_id).delete()
+
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": f"Faculty '{name}' deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Delete failed: {str(e)}"}), 500
 
 
 # ── Subject Management ──────────────────────────────────────────────────────
@@ -115,9 +143,24 @@ def create_subject():
 def delete_subject(subject_id):
     subject = Subject.query.get_or_404(subject_id)
     name = subject.name
-    db.session.delete(subject)
-    db.session.commit()
-    return jsonify({"message": f"Subject '{name}' deleted successfully"}), 200
+    try:
+        from app.models.timetable import TimetableSlot
+        from app.models.marks import StudentMarks
+        from app.models.attendance import Attendance
+        from app.models.subject import subject_students
+
+        Attendance.query.filter_by(subject_id=subject_id).delete()
+        StudentMarks.query.filter_by(subject_id=subject_id).delete()
+        TimetableSlot.query.filter_by(subject_id=subject_id).delete()
+        db.session.execute(
+            subject_students.delete().where(subject_students.c.subject_id == subject_id)
+        )
+        db.session.delete(subject)
+        db.session.commit()
+        return jsonify({"message": f"Subject '{name}' deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Delete failed: {str(e)}"}), 500
 
 
 # ── Timetable Upload ────────────────────────────────────────────────────────
