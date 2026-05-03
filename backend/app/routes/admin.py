@@ -159,15 +159,29 @@ def upload_timetable():
 
     for _, row in df.iterrows():
         try:
-            faculty = User.query.filter_by(email=str(row["faculty_email"]).strip().lower()).first()
-            subject = Subject.query.filter_by(code=str(row["subject_code"]).strip()).first()
+            # Fix: Excel often saves numbers as float (e.g. 123.0) — convert to clean string
+            raw_email = str(row["faculty_email"]).strip().lower()
+            raw_code = str(row["subject_code"]).strip()
+            # Remove .0 suffix if Excel converted code to float
+            if raw_code.endswith(".0") and raw_code[:-2].isdigit():
+                raw_code = raw_code[:-2]
+
+            faculty = User.query.filter(
+                User.email.ilike(raw_email)
+            ).first()
+            subject = Subject.query.filter(
+                Subject.code.ilike(raw_code)
+            ).first()
 
             if not faculty:
-                errors.append(f"Faculty not found: {row['faculty_email']}")
+                # Show helpful message with available emails
+                available = [u.email for u in User.query.filter_by(role="faculty").limit(3).all()]
+                hint = f" (Available: {', '.join(available)})" if available else ""
+                errors.append(f"Faculty not found: {raw_email}{hint}")
                 skipped += 1
                 continue
             if not subject:
-                errors.append(f"Subject not found: {row['subject_code']}")
+                errors.append(f"Subject not found: '{raw_code}' — make sure subject is created first in Admin → Subjects")
                 skipped += 1
                 continue
 
@@ -271,7 +285,10 @@ def upload_students():
             if "subject_codes" in row and pd.notna(row["subject_codes"]):
                 codes = [c.strip() for c in str(row["subject_codes"]).split(",")]
                 for code in codes:
-                    subject = Subject.query.filter_by(code=code).first()
+                    # Fix float codes from Excel (e.g. 123.0 → 123)
+                    if code.endswith(".0") and code[:-2].isdigit():
+                        code = code[:-2]
+                    subject = Subject.query.filter(Subject.code.ilike(code)).first()
                     if subject and student not in subject.students:
                         subject.students.append(student)
 
