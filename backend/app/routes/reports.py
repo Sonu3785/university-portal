@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
+from app import db
 from app.models.subject import Subject
 from app.models.attendance import Attendance
 from app.models.student import Student
@@ -51,7 +52,9 @@ def subject_report(subject_id):
     user_id = int(get_jwt_identity())
     claims = get_jwt()
 
-    subject = Subject.query.get_or_404(subject_id)
+    subject = db.session.get(Subject, subject_id)
+    if not subject:
+        return jsonify({"error": "Subject not found"}), 404
     if claims.get("role") == "faculty" and subject.faculty_id != user_id:
         return jsonify({"error": "Access denied"}), 403
 

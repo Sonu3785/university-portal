@@ -410,16 +410,26 @@ def upload_students():
 @jwt_required()
 def send_defaulter_mails(subject_id):
     claims = get_jwt()
-    # Both admin and faculty (owner) can send
     from flask_jwt_extended import get_jwt_identity
     user_id = int(get_jwt_identity())
 
-    subject = Subject.query.get_or_404(subject_id)
+    from app import db as _db
+    subject = _db.session.get(Subject, subject_id)
+    if not subject:
+        return jsonify({"error": "Subject not found"}), 404
     if claims.get("role") == "faculty" and subject.faculty_id != user_id:
         return jsonify({"error": "Access denied"}), 403
 
     students = subject.students
     sent, failed = 0, 0
+
+    # Get faculty name safely
+    faculty_name = "Faculty"
+    try:
+        if subject.faculty:
+            faculty_name = subject.faculty.name
+    except Exception:
+        pass
 
     for student in students:
         records = Attendance.query.filter_by(
@@ -441,8 +451,8 @@ def send_defaulter_mails(subject_id):
                         f"which is below the required 75%.\n\n"
                         f"Classes attended: {present} / {total}\n\n"
                         f"Please ensure regular attendance to avoid academic consequences.\n\n"
-                        f"Regards,\n{subject.faculty.name if subject.faculty else 'Faculty'}\n"
-                        f"University"
+                        f"Regards,\n{faculty_name}\n"
+                        f"MIT-ADT University"
                     )
                 )
                 mail.send(msg)
