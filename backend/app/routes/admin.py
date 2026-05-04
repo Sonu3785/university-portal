@@ -213,31 +213,38 @@ def upload_timetable():
             if raw_code.endswith(".0") and raw_code[:-2].isdigit():
                 raw_code = raw_code[:-2]
 
-            faculty = User.query.filter(
-                User.email.ilike(raw_email)
-            ).first()
-            
-            # Find subject by code AND faculty (since same code can belong to multiple faculty)
+            # Auto-create faculty if not found
+            faculty = User.query.filter(User.email.ilike(raw_email)).first()
+            if not faculty:
+                faculty = User(
+                    name=raw_email.split("@")[0].replace(".", " ").title(),
+                    email=raw_email,
+                    role="faculty",
+                    department="General"
+                )
+                faculty.set_password("faculty123")
+                db.session.add(faculty)
+                db.session.flush()
+                errors.append(f"Auto-created faculty: {raw_email} (password: faculty123)")
+
+            # Find subject by code AND faculty
             subject = Subject.query.filter(
                 Subject.code.ilike(raw_code),
-                Subject.faculty_id == faculty.id if faculty else False
+                Subject.faculty_id == faculty.id
             ).first()
-            
-            # If not found by faculty, try by code only (fallback)
-            if not subject and faculty:
-                subject = Subject.query.filter(Subject.code.ilike(raw_code)).first()
 
-            if not faculty:
-                # Show helpful message with available emails
-                available = [u.email for u in User.query.filter_by(role="faculty").limit(3).all()]
-                hint = f" (Available: {', '.join(available)})" if available else ""
-                errors.append(f"Faculty not found: {raw_email}{hint}")
-                skipped += 1
-                continue
+            # Auto-create subject if not found
             if not subject:
-                errors.append(f"Subject not found: '{raw_code}' — make sure subject is created first in Admin → Subjects")
-                skipped += 1
-                continue
+                subject = Subject(
+                    name=raw_code,
+                    code=raw_code.upper(),
+                    faculty_id=faculty.id,
+                    semester=None,
+                    branch="General"
+                )
+                db.session.add(subject)
+                db.session.flush()
+                errors.append(f"Auto-created subject: {raw_code} for {raw_email}")
 
             day = str(row["day"]).strip().capitalize()
             if day not in valid_days:

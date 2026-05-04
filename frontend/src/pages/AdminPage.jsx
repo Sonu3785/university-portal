@@ -53,9 +53,14 @@ function FacultyTab() {
   const { data: faculty = [], isLoading } = useQuery({ queryKey: ["all-faculty"], queryFn: () => api.get("/admin/faculty").then(r => r.data) })
 
   const createMutation = useMutation({
-    mutationFn: () => api.post("/admin/faculty", form),
+    mutationFn: () => {
+      if (!form.name || !form.email || !form.password || !form.department) {
+        throw new Error("Name, Email, Password and Department are required")
+      }
+      return api.post("/admin/faculty", form)
+    },
     onSuccess: () => { toast.success("Faculty created!"); qc.invalidateQueries(["all-faculty"]); setShowForm(false); setForm({ name: "", email: "", password: "", department: "", phone: "" }) },
-    onError: (err) => toast.error(err.response?.data?.error || "Failed")
+    onError: (err) => toast.error(err.response?.data?.error || err.message || "Failed")
   })
 
   const deleteMutation = useMutation({
@@ -86,10 +91,10 @@ function FacultyTab() {
       </div>
       {showForm && (
         <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[{label:"Full Name",key:"name",type:"text"},{label:"Email",key:"email",type:"email"},{label:"Password",key:"password",type:"password"},{label:"Department",key:"department",type:"text"},{label:"Phone",key:"phone",type:"text"}].map(({ label, key, type }) => (
+          {[{label:"Full Name *",key:"name",type:"text"},{label:"Email *",key:"email",type:"email"},{label:"Password *",key:"password",type:"password"},{label:"Department *",key:"department",type:"text"},{label:"Phone",key:"phone",type:"text"}].map(({ label, key, type }) => (
             <div key={key}>
               <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
-              <input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input required={!label.includes("Phone")} type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           ))}
           <div className="col-span-2">
@@ -137,9 +142,14 @@ function SubjectsTab() {
   const { data: faculty = [] } = useQuery({ queryKey: ["all-faculty"], queryFn: () => api.get("/admin/faculty").then(r => r.data) })
 
   const createMutation = useMutation({
-    mutationFn: () => api.post("/admin/subjects", { ...form, semester: parseInt(form.semester) || null }),
+    mutationFn: () => {
+      if (!form.name || !form.code || !form.faculty_id) {
+        throw new Error("Subject Name, Code and Faculty are required")
+      }
+      return api.post("/admin/subjects", { ...form, semester: parseInt(form.semester) || null })
+    },
     onSuccess: () => { toast.success("Subject created!"); qc.invalidateQueries(["all-subjects"]); setShowForm(false); setForm({ name: "", code: "", faculty_id: "", semester: "", branch: "" }) },
-    onError: (err) => toast.error(err.response?.data?.error || "Failed")
+    onError: (err) => toast.error(err.response?.data?.error || err.message || "Failed")
   })
 
   const deleteMutation = useMutation({
@@ -165,10 +175,10 @@ function SubjectsTab() {
       </div>
       {showForm && (
         <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[{label:"Subject Name",key:"name",type:"text"},{label:"Subject Code",key:"code",type:"text"},{label:"Semester",key:"semester",type:"number"},{label:"Branch",key:"branch",type:"text"}].map(({ label, key, type }) => (
+          {[{label:"Subject Name *",key:"name",type:"text"},{label:"Subject Code *",key:"code",type:"text"},{label:"Semester",key:"semester",type:"number"},{label:"Branch",key:"branch",type:"text"}].map(({ label, key, type }) => (
             <div key={key}>
               <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
-              <input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input required={label.includes("*")} type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           ))}
           <div>
