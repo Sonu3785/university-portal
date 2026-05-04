@@ -24,6 +24,17 @@ def send_lecture_reminders(app):
         today = date.today()
         day_name = today.strftime("%A")
 
+        # Use IST timezone for India
+        try:
+            from zoneinfo import ZoneInfo
+            ist = ZoneInfo("Asia/Kolkata")
+            from datetime import timezone
+            now = datetime.now(ist).replace(tzinfo=None)
+            today = now.date()
+            day_name = now.strftime("%A")
+        except Exception:
+            pass
+
         if day_name not in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]:
             return
 
@@ -99,15 +110,21 @@ def send_lecture_reminders(app):
 
 
 def start_scheduler(app):
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(
-        func=send_lecture_reminders,
-        args=[app],
-        trigger="interval",
-        minutes=1,
-        id="lecture_reminder",
-        replace_existing=True
-    )
-    scheduler.start()
-    logger.info("Reminder scheduler started — checking every minute")
-    return scheduler
+    import os
+    # Only start scheduler in main process (not in reloader child process)
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or os.environ.get('FLASK_ENV') == 'production':
+        scheduler = BackgroundScheduler(timezone="Asia/Kolkata")
+        scheduler.add_job(
+            func=send_lecture_reminders,
+            args=[app],
+            trigger="interval",
+            minutes=1,
+            id="lecture_reminder",
+            replace_existing=True
+        )
+        scheduler.start()
+        logger.info("Reminder scheduler started — checking every minute (IST)")
+        return scheduler
+    else:
+        logger.info("Skipping scheduler start in reloader process")
+        return None
