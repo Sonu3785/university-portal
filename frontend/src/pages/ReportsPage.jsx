@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import api from '../api/axios'
-import { BarChart3, TrendingDown, Users } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { BarChart3, Mail } from 'lucide-react'
 
 export default function ReportsPage() {
   const [selectedSubject, setSelectedSubject] = useState(null)
@@ -17,15 +18,23 @@ export default function ReportsPage() {
     enabled: !!selectedSubject
   })
 
+  const mailMutation = useMutation({
+    mutationFn: (subjectId) => api.post(`/admin/send-defaulter-mails/${subjectId}`),
+    onSuccess: (res) => toast.success(res.data.message),
+    onError: (err) => toast.error(err.response?.data?.error || 'Failed to send mails')
+  })
+
+  const selectedSummary = summary.find(s => s.subject_id === selectedSubject)
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-800">Reports</h1>
-        <p className="text-slate-500 mt-1">Attendance overview across your subjects</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Reports</h1>
+        <p className="text-slate-500 mt-1 text-sm">Attendance overview across your subjects</p>
       </div>
 
       {/* Subject Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 mb-6 sm:mb-8">
         {isLoading ? (
           <p className="text-slate-400 text-sm col-span-3">Loading...</p>
         ) : summary.map((s) => (
@@ -64,56 +73,76 @@ export default function ReportsPage() {
       {/* Detailed Report */}
       {selectedSubject && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-700">
-              {subjectReport?.subject?.name} — Detailed Report
-            </h2>
-            <span className="text-xs text-slate-400">{subjectReport?.subject?.code}</span>
+          {/* Header with Mail Defaulters button */}
+          <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-slate-700">
+                {subjectReport?.subject?.name} — Detailed Report
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">{subjectReport?.subject?.code}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {selectedSummary?.defaulters > 0 && (
+                <span className="text-xs bg-rose-100 text-rose-600 font-semibold px-2.5 py-1 rounded-full">
+                  {selectedSummary.defaulters} defaulters
+                </span>
+              )}
+              <button
+                onClick={() => mailMutation.mutate(selectedSubject)}
+                disabled={mailMutation.isPending}
+                className="flex items-center gap-2 bg-rose-500 hover:bg-rose-600 disabled:opacity-60 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors"
+              >
+                <Mail size={14} />
+                {mailMutation.isPending ? 'Sending...' : 'Mail Defaulters'}
+              </button>
+            </div>
           </div>
 
           {loadingReport ? (
             <p className="p-6 text-slate-400 text-sm">Loading report...</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  {['Roll No.', 'Name', 'Present', 'Absent', 'Total', 'Attendance %', 'Status'].map(h => (
-                    <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {(subjectReport?.report || []).map((row) => (
-                  <tr key={row.id} className={row.is_defaulter ? 'bg-rose-50' : ''}>
-                    <td className="px-5 py-3 font-mono text-xs text-slate-600">{row.roll_number}</td>
-                    <td className="px-5 py-3 font-medium text-slate-700">{row.name}</td>
-                    <td className="px-5 py-3 text-emerald-600 font-semibold">{row.present}</td>
-                    <td className="px-5 py-3 text-rose-600 font-semibold">{row.absent}</td>
-                    <td className="px-5 py-3 text-slate-600">{row.total_classes}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-slate-100 rounded-full h-1.5 max-w-[80px]">
-                          <div
-                            className={`h-1.5 rounded-full ${row.percentage >= 75 ? 'bg-emerald-500' : 'bg-rose-500'}`}
-                            style={{ width: `${Math.min(row.percentage, 100)}%` }}
-                          />
-                        </div>
-                        <span className={`text-xs font-bold ${row.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {row.percentage}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      {row.is_defaulter ? (
-                        <span className="text-xs bg-rose-100 text-rose-600 font-semibold px-2 py-0.5 rounded-full">Defaulter</span>
-                      ) : (
-                        <span className="text-xs bg-emerald-100 text-emerald-600 font-semibold px-2 py-0.5 rounded-full">OK</span>
-                      )}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    {['Roll No.', 'Name', 'Present', 'Absent', 'Total', 'Attendance %', 'Status'].map(h => (
+                      <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {(subjectReport?.report || []).map((row) => (
+                    <tr key={row.id} className={row.is_defaulter ? 'bg-rose-50' : ''}>
+                      <td className="px-5 py-3 font-mono text-xs text-slate-600">{row.roll_number}</td>
+                      <td className="px-5 py-3 font-medium text-slate-700">{row.name}</td>
+                      <td className="px-5 py-3 text-emerald-600 font-semibold">{row.present}</td>
+                      <td className="px-5 py-3 text-rose-600 font-semibold">{row.absent}</td>
+                      <td className="px-5 py-3 text-slate-600">{row.total_classes}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-slate-100 rounded-full h-1.5 max-w-[80px]">
+                            <div
+                              className={`h-1.5 rounded-full ${row.percentage >= 75 ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                              style={{ width: `${Math.min(row.percentage, 100)}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-bold ${row.percentage >= 75 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                            {row.percentage}%
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        {row.is_defaulter ? (
+                          <span className="text-xs bg-rose-100 text-rose-600 font-semibold px-2 py-0.5 rounded-full">Defaulter</span>
+                        ) : (
+                          <span className="text-xs bg-emerald-100 text-emerald-600 font-semibold px-2 py-0.5 rounded-full">OK</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}
