@@ -2,9 +2,9 @@ import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "../api/axios"
 import toast from "react-hot-toast"
-import { Upload, UserPlus, CheckCircle, XCircle, Clock, BookOpen, Trash2 } from "lucide-react"
+import { Upload, UserPlus, BookOpen, Trash2 } from "lucide-react"
 
-const TABS = ["Faculty", "Subjects", "Timetable Upload", "Student Upload", "Leave Approvals"]
+const TABS = ["Faculty", "Subjects", "Timetable Upload", "Student Upload"]
 
 export default function AdminPage() {
   const [tab, setTab] = useState("Faculty")
@@ -12,7 +12,7 @@ export default function AdminPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Admin Panel</h1>
-        <p className="text-slate-500 mt-1 text-sm">Manage faculty, subjects, timetable and approvals</p>
+        <p className="text-slate-500 mt-1 text-sm">Manage faculty, subjects and timetable</p>
       </div>
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 overflow-x-auto scrollbar-none">
         {TABS.map(t => (
@@ -26,7 +26,6 @@ export default function AdminPage() {
       {tab === "Subjects" && <SubjectsTab />}
       {tab === "Timetable Upload" && <TimetableUploadTab />}
       {tab === "Student Upload" && <StudentUploadTab />}
-      {tab === "Leave Approvals" && <LeaveApprovalsTab />}
     </div>
   )
 }
@@ -324,72 +323,3 @@ function StudentUploadTab() {
   )
 }
 
-function LeaveApprovalsTab() {
-  const qc = useQueryClient()
-  const [remark, setRemark] = useState({})
-  const { data: leaves = [], isLoading } = useQuery({ queryKey: ["all-leaves"], queryFn: () => api.get("/leave/all").then(r => r.data) })
-  const actionMutation = useMutation({
-    mutationFn: ({ id, action }) => api.put("/leave/action/" + id, { action, remark: remark[id] || "" }),
-    onSuccess: (_, { action }) => { toast.success("Leave " + action + "!"); qc.invalidateQueries(["all-leaves"]) },
-    onError: () => toast.error("Action failed")
-  })
-  const pending = leaves.filter(l => l.status === "pending")
-  const others = leaves.filter(l => l.status !== "pending")
-  return (
-    <div>
-      <h2 className="font-semibold text-slate-700 mb-5">Leave Approvals</h2>
-      {isLoading ? <p className="text-slate-400 text-sm">Loading...</p> : (
-        <>
-          {pending.length > 0 && (
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-amber-600 mb-3 flex items-center gap-2"><Clock size={14} /> Pending ({pending.length})</h3>
-              <div className="space-y-4">
-                {pending.map(leave => (
-                  <div key={leave.id} className="bg-white rounded-2xl border border-amber-100 shadow-sm p-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-semibold text-slate-700">{leave.faculty_name}</p>
-                        <p className="text-sm text-slate-500">{leave.from_date} to {leave.to_date}</p>
-                        <p className="text-sm text-slate-600 mt-1">{leave.reason}</p>
-                      </div>
-                      <span className="text-xs text-slate-400">{new Date(leave.applied_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-                      <input type="text" placeholder="Add remark (optional)" value={remark[leave.id] || ""} onChange={e => setRemark({ ...remark, [leave.id]: e.target.value })} className="flex-1 min-w-[140px] border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "approved" })} className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold"><CheckCircle size={14} /> Approve</button>
-                      <button onClick={() => actionMutation.mutate({ id: leave.id, action: "rejected" })} className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-semibold"><XCircle size={14} /> Reject</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {others.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-slate-500 mb-3">Past Requests</h3>
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-                <table className="w-full text-sm min-w-[550px]">
-                  <thead className="bg-slate-50 border-b border-slate-100">
-                    <tr>{["Faculty","Dates","Reason","Status","Remark"].map(h => <th key={h} className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>)}</tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {others.map(leave => (
-                      <tr key={leave.id}>
-                        <td className="px-5 py-3 font-medium text-slate-700">{leave.faculty_name}</td>
-                        <td className="px-5 py-3 text-slate-500 text-xs">{leave.from_date} to {leave.to_date}</td>
-                        <td className="px-5 py-3 text-slate-500 max-w-xs truncate">{leave.reason}</td>
-                        <td className="px-5 py-3"><span className={"text-xs font-semibold px-2 py-0.5 rounded-full " + (leave.status === "approved" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>{leave.status}</span></td>
-                        <td className="px-5 py-3 text-slate-400 text-xs">{leave.admin_remark || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          {leaves.length === 0 && <p className="text-slate-400 text-sm">No leave requests found.</p>}
-        </>
-      )}
-    </div>
-  )
-}
