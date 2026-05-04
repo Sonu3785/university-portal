@@ -6,7 +6,7 @@ class Subject(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
-    code = db.Column(db.String(20), unique=True, nullable=False)
+    code = db.Column(db.String(20), nullable=False)  # Not unique — same code can be assigned to multiple faculty
     faculty_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     semester = db.Column(db.Integer)
     branch = db.Column(db.String(100))

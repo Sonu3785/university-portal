@@ -123,8 +123,12 @@ def get_all_subjects():
 @admin_required
 def create_subject():
     data = request.get_json()
-    if Subject.query.filter_by(code=data["code"]).first():
-        return jsonify({"error": "Subject code already exists"}), 400
+    # Allow same code for different faculty, but not same code+faculty combo
+    existing = Subject.query.filter_by(
+        code=data["code"], faculty_id=data["faculty_id"]
+    ).first()
+    if existing:
+        return jsonify({"error": "This subject code is already assigned to this faculty"}), 400
 
     subject = Subject(
         name=data["name"],
@@ -212,9 +216,16 @@ def upload_timetable():
             faculty = User.query.filter(
                 User.email.ilike(raw_email)
             ).first()
+            
+            # Find subject by code AND faculty (since same code can belong to multiple faculty)
             subject = Subject.query.filter(
-                Subject.code.ilike(raw_code)
+                Subject.code.ilike(raw_code),
+                Subject.faculty_id == faculty.id if faculty else False
             ).first()
+            
+            # If not found by faculty, try by code only (fallback)
+            if not subject and faculty:
+                subject = Subject.query.filter(Subject.code.ilike(raw_code)).first()
 
             if not faculty:
                 # Show helpful message with available emails
