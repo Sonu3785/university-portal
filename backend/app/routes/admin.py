@@ -53,6 +53,36 @@ def create_faculty():
     user.set_password(data["password"])
     db.session.add(user)
     db.session.commit()
+
+    # Send welcome email to new faculty
+    try:
+        msg = Message(
+            subject="🎓 Welcome to MIT-ADT University Faculty Portal!",
+            recipients=[user.email],
+            body=(
+                f"Dear {user.name},\n\n"
+                f"Congratulations! 🎉 You have been successfully added as a Faculty Member "
+                f"at MIT-ADT University Faculty Management System.\n\n"
+                f"Your login credentials:\n"
+                f"  📧 Email:    {user.email}\n"
+                f"  🔑 Password: {data['password']}\n\n"
+                f"Portal Link: https://university-portal-brown.vercel.app\n\n"
+                f"You can now:\n"
+                f"  ✅ View your timetable\n"
+                f"  ✅ Mark attendance\n"
+                f"  ✅ Enter CA/TA marks\n"
+                f"  ✅ View reports\n"
+                f"  ✅ Set lecture reminders\n\n"
+                f"Please change your password after first login.\n\n"
+                f"Regards,\n"
+                f"MIT-ADT University Admin\n"
+                f"Faculty Management System"
+            )
+        )
+        mail.send(msg)
+    except Exception as e:
+        print(f"Welcome email failed for {user.email}: {e}")
+
     return jsonify(user.to_dict()), 201
 
 
@@ -439,7 +469,8 @@ def send_defaulter_mails(subject_id):
         present = sum(1 for r in records if r.status == "present")
         percentage = round((present / total * 100), 2) if total > 0 else 0.0
 
-        if percentage < 75 and student.email:
+        # Only send if at least 1 class was taken AND attendance < 75%
+        if total > 0 and percentage < 75 and student.email:
             try:
                 msg = Message(
                     subject=f"⚠️ Low Attendance Warning — {subject.name}",
@@ -460,6 +491,9 @@ def send_defaulter_mails(subject_id):
             except Exception as e:
                 print(f"Failed to send mail to {student.email}: {e}")
                 failed += 1
+
+    if sent == 0 and failed == 0:
+        return jsonify({"message": "No defaulters found — all students have attendance >= 75% or no classes taken yet"}), 200
 
     return jsonify({
         "message": f"Defaulter emails sent: {sent} sent, {failed} failed"
