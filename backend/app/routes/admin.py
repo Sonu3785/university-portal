@@ -239,6 +239,21 @@ def create_subject():
     return jsonify({"message": f"Subject '{data['code']}' assigned to {len(created)} faculty"}), 201
 
 
+@admin_bp.route("/subjects/<int:subject_id>", methods=["PUT"])
+@admin_required
+def update_subject(subject_id):
+    subject = Subject.query.get_or_404(subject_id)
+    data = request.get_json()
+    subject.name = data.get("name", subject.name)
+    subject.code = data.get("code", subject.code)
+    subject.semester = data.get("semester", subject.semester)
+    subject.branch = data.get("branch", subject.branch)
+    if data.get("faculty_id"):
+        subject.faculty_id = data["faculty_id"]
+    db.session.commit()
+    return jsonify(subject.to_dict()), 200
+
+
 @admin_bp.route("/subjects/<int:subject_id>", methods=["DELETE"])
 @admin_required
 def delete_subject(subject_id):

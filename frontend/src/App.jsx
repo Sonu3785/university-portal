@@ -9,6 +9,7 @@ import ReportsPage from './pages/ReportsPage'
 import AdminPage from './pages/AdminPage'
 import ReminderPage from './pages/ReminderPage'
 import MarksPage from './pages/MarksPage'
+import ProfilePage from './pages/ProfilePage'
 
 function PrivateRoute({ children, adminOnly = false }) {
   const { user } = useAuth()
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="marks" element={<MarksPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="reminders" element={<ReminderPage />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="admin" element={<PrivateRoute adminOnly><AdminPage /></PrivateRoute>} />
       </Route>
     </Routes>

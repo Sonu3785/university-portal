@@ -5,7 +5,7 @@ import { useReminderNotifications } from '../hooks/useReminderNotifications'
 import NotificationBell from './NotificationBell'
 import {
   LayoutDashboard, CalendarDays, ClipboardList,
-  BarChart3, Bell, LogOut, ShieldCheck, BookMarked, Menu, X
+  BarChart3, Bell, LogOut, ShieldCheck, BookMarked, Menu, X, User
 } from 'lucide-react'
 
 const navItems = [
@@ -110,6 +110,20 @@ export default function Layout() {
             Admin Panel
           </NavLink>
         )}
+
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? 'bg-indigo-50 text-indigo-600'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`
+          }
+        >
+          <User size={18} />
+          Profile
+        </NavLink>
       </nav>
 
       {/* Logout */}

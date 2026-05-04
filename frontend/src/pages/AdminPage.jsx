@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "../api/axios"
 import toast from "react-hot-toast"
-import { Upload, UserPlus, BookOpen, Trash2, Eye } from "lucide-react"
+import { Upload, UserPlus, BookOpen, Trash2, Eye, Pencil } from "lucide-react"
 
 const TABS = ["Faculty", "Faculty Attendance", "Subjects", "Timetable Upload", "Student Upload"]
 
@@ -138,10 +138,84 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   )
 }
 
+function EditFacultyModal({ faculty, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: faculty.name || "", department: faculty.department || "", phone: faculty.phone || "" })
+  const mutation = useMutation({
+    mutationFn: () => api.put("/admin/faculty/" + faculty.id, form),
+    onSuccess: () => { toast.success("Faculty updated!"); onSaved() },
+    onError: (err) => toast.error(err.response?.data?.error || "Update failed")
+  })
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <h3 className="font-bold text-slate-800 mb-4">Edit Faculty</h3>
+        <div className="space-y-3">
+          {[{ label: "Full Name", key: "name", type: "text" }, { label: "Department", key: "department", type: "text" }, { label: "Phone", key: "phone", type: "text" }].map(({ label, key, type }) => (
+            <div key={key}>
+              <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
+              <input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">Cancel</button>
+          <button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+            {mutation.isPending ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function EditSubjectModal({ subject, faculty, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: subject.name || "",
+    code: subject.code || "",
+    semester: subject.semester || "",
+    branch: subject.branch || "",
+    faculty_id: subject.faculty_id || ""
+  })
+  const mutation = useMutation({
+    mutationFn: () => api.put("/admin/subjects/" + subject.id, { ...form, semester: parseInt(form.semester) || null, faculty_id: form.faculty_id || undefined }),
+    onSuccess: () => { toast.success("Subject updated!"); onSaved() },
+    onError: (err) => toast.error(err.response?.data?.error || "Update failed")
+  })
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+        <h3 className="font-bold text-slate-800 mb-4">Edit Subject</h3>
+        <div className="space-y-3">
+          {[{ label: "Subject Name", key: "name", type: "text" }, { label: "Subject Code", key: "code", type: "text" }, { label: "Semester", key: "semester", type: "number" }, { label: "Branch", key: "branch", type: "text" }].map(({ label, key, type }) => (
+            <div key={key}>
+              <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
+              <input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+          ))}
+          <div>
+            <label className="text-xs font-medium text-slate-600 mb-1 block">Faculty</label>
+            <select value={form.faculty_id} onChange={e => setForm({ ...form, faculty_id: parseInt(e.target.value) })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">— Select Faculty —</option>
+              {faculty.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-3 justify-end mt-6">
+          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-600 border border-slate-200 hover:bg-slate-50">Cancel</button>
+          <button onClick={() => mutation.mutate()} disabled={mutation.isPending} className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60">
+            {mutation.isPending ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function FacultyTab() {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [editFaculty, setEditFaculty] = useState(null)
   const [form, setForm] = useState({ name: "", email: "", password: "", department: "", phone: "" })
   const { data: faculty = [], isLoading } = useQuery({ queryKey: ["all-faculty"], queryFn: () => api.get("/admin/faculty").then(r => r.data) })
 
@@ -174,6 +248,13 @@ function FacultyTab() {
           message={"Delete " + confirmDelete.name + "? This will also delete all their subjects, timetable slots and attendance records."}
           onConfirm={() => deleteMutation.mutate(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {editFaculty && (
+        <EditFacultyModal
+          faculty={editFaculty}
+          onClose={() => setEditFaculty(null)}
+          onSaved={() => { qc.invalidateQueries(["all-faculty"]); setEditFaculty(null) }}
         />
       )}
       <div className="flex justify-between items-center mb-4">
@@ -212,9 +293,14 @@ function FacultyTab() {
                   <td className="px-5 py-3 text-slate-500">{f.phone || "—"}</td>
                   <td className="px-5 py-3"><span className={"text-xs font-semibold px-2 py-0.5 rounded-full " + (f.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>{f.is_active ? "Active" : "Inactive"}</span></td>
                   <td className="px-5 py-3">
-                    <button onClick={() => setConfirmDelete(f)} className="flex items-center gap-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
-                      <Trash2 size={13} /> Delete
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => setEditFaculty(f)} className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
+                        <Pencil size={13} /> Edit
+                      </button>
+                      <button onClick={() => setConfirmDelete(f)} className="flex items-center gap-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
+                        <Trash2 size={13} /> Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,6 +316,7 @@ function SubjectsTab() {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [editSubject, setEditSubject] = useState(null)
   const [form, setForm] = useState({ name: "", code: "", faculty_ids: [], semester: "", branch: "" })
   const { data: subjects = [], isLoading } = useQuery({ queryKey: ["all-subjects"], queryFn: () => api.get("/admin/subjects").then(r => r.data) })
   const { data: faculty = [] } = useQuery({ queryKey: ["all-faculty"], queryFn: () => api.get("/admin/faculty").then(r => r.data) })
@@ -276,6 +363,14 @@ function SubjectsTab() {
           message={"Delete subject " + confirmDelete.name + " (" + confirmDelete.code + ")? All attendance records for this subject will also be deleted."}
           onConfirm={() => deleteMutation.mutate(confirmDelete.id)}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+      {editSubject && (
+        <EditSubjectModal
+          subject={editSubject}
+          faculty={faculty}
+          onClose={() => setEditSubject(null)}
+          onSaved={() => { qc.invalidateQueries(["all-subjects"]); setEditSubject(null) }}
         />
       )}
       <div className="flex justify-between items-center mb-4">
@@ -343,9 +438,14 @@ function SubjectsTab() {
                     <td className="px-5 py-3 text-slate-500">{s.branch || "—"}</td>
                     <td className="px-5 py-3 text-slate-500">{f?.name || "—"}</td>
                     <td className="px-5 py-3">
-                      <button onClick={() => setConfirmDelete(s)} className="flex items-center gap-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
-                        <Trash2 size={13} /> Delete
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => setEditSubject(s)} className="flex items-center gap-1.5 text-xs text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
+                          <Pencil size={13} /> Edit
+                        </button>
+                        <button onClick={() => setConfirmDelete(s)} className="flex items-center gap-1.5 text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1.5 rounded-lg transition-colors font-semibold">
+                          <Trash2 size={13} /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
