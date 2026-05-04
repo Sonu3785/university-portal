@@ -2,9 +2,9 @@ import { useState, useEffect } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "../api/axios"
 import toast from "react-hot-toast"
-import { Upload, UserPlus, BookOpen, Trash2 } from "lucide-react"
+import { Upload, UserPlus, BookOpen, Trash2, Eye } from "lucide-react"
 
-const TABS = ["Faculty", "Subjects", "Timetable Upload", "Student Upload"]
+const TABS = ["Faculty", "Faculty Attendance", "Subjects", "Timetable Upload", "Student Upload"]
 
 export default function AdminPage() {
   const [tab, setTab] = useState("Faculty")
@@ -23,9 +23,102 @@ export default function AdminPage() {
         ))}
       </div>
       {tab === "Faculty" && <FacultyTab />}
+      {tab === "Faculty Attendance" && <FacultyAttendanceTab />}
       {tab === "Subjects" && <SubjectsTab />}
       {tab === "Timetable Upload" && <TimetableUploadTab />}
       {tab === "Student Upload" && <StudentUploadTab />}
+    </div>
+  )
+}
+
+function FacultyAttendanceTab() {
+  const [expanded, setExpanded] = useState(null)
+  const { data: facultyStats = [], isLoading } = useQuery({
+    queryKey: ["faculty-attendance"],
+    queryFn: () => api.get("/admin/faculty-attendance").then(r => r.data)
+  })
+
+  return (
+    <div>
+      <div className="mb-4">
+        <h2 className="font-semibold text-slate-700">Faculty Lecture Attendance</h2>
+        <p className="text-xs text-slate-400 mt-1">Track how many lectures each faculty has conducted vs scheduled</p>
+      </div>
+      {isLoading ? (
+        <p className="text-slate-400 text-sm">Loading...</p>
+      ) : facultyStats.length === 0 ? (
+        <p className="text-slate-400 text-sm">No faculty data found.</p>
+      ) : (
+        <div className="space-y-4">
+          {facultyStats.map(f => (
+            <div key={f.faculty_id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              {/* Faculty Row */}
+              <div
+                className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50"
+                onClick={() => setExpanded(expanded === f.faculty_id ? null : f.faculty_id)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
+                    {f.faculty_name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-700">{f.faculty_name}</p>
+                    <p className="text-xs text-slate-400">{f.faculty_email} · {f.department}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 text-right">
+                  <div>
+                    <p className="text-xs text-slate-400">Subjects</p>
+                    <p className="font-bold text-slate-700">{f.total_subjects}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Slots/Week</p>
+                    <p className="font-bold text-indigo-600">{f.total_slots_per_week}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-400">Lectures Taken</p>
+                    <p className="font-bold text-emerald-600">{f.total_lectures_conducted}</p>
+                  </div>
+                  <Eye size={16} className={"text-slate-400 transition-transform " + (expanded === f.faculty_id ? "rotate-180" : "")} />
+                </div>
+              </div>
+
+              {/* Expanded Subject Details */}
+              {expanded === f.faculty_id && (
+                <div className="border-t border-slate-100 overflow-x-auto">
+                  <table className="w-full text-sm min-w-[500px]">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        {["Subject Code", "Subject Name", "Students", "Slots/Week", "Lectures Conducted"].map(h => (
+                          <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {f.subjects.map(s => (
+                        <tr key={s.subject_id} className="hover:bg-slate-50">
+                          <td className="px-5 py-3 font-mono text-xs text-indigo-600 font-semibold">{s.subject_code}</td>
+                          <td className="px-5 py-3 font-medium text-slate-700">{s.subject_name}</td>
+                          <td className="px-5 py-3 text-slate-500">{s.total_students}</td>
+                          <td className="px-5 py-3 text-indigo-600 font-semibold">{s.slots_per_week}</td>
+                          <td className="px-5 py-3">
+                            <span className={"font-bold " + (s.lectures_conducted > 0 ? "text-emerald-600" : "text-slate-400")}>
+                              {s.lectures_conducted}
+                            </span>
+                            {s.lectures_conducted === 0 && (
+                              <span className="ml-2 text-xs text-amber-500">No classes taken yet</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt
+from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from app import db, mail
 from app.models.user import User
 from app.models.subject import Subject
@@ -7,7 +7,7 @@ from app.models.student import Student
 from app.models.timetable import TimetableSlot
 from app.models.attendance import Attendance
 from flask_mail import Message
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
 import io
 
@@ -15,7 +15,6 @@ admin_bp = Blueprint("admin", __name__)
 
 
 def admin_required(fn):
-    """Decorator to enforce admin-only access."""
     from functools import wraps
     @wraps(fn)
     @jwt_required()
@@ -54,7 +53,7 @@ def create_faculty():
     db.session.add(user)
     db.session.commit()
 
-    # Send welcome email to new faculty
+    # Send welcome email
     try:
         msg = Message(
             subject="🎓 Welcome to MIT-ADT University Faculty Portal!",
@@ -74,14 +73,12 @@ def create_faculty():
                 f"  ✅ View reports\n"
                 f"  ✅ Set lecture reminders\n\n"
                 f"Please change your password after first login.\n\n"
-                f"Regards,\n"
-                f"MIT-ADT University Admin\n"
-                f"Faculty Management System"
+                f"Regards,\nMIT-ADT University Admin"
             )
         )
         mail.send(msg)
     except Exception as e:
-        print(f"Welcome email failed for {user.email}: {e}")
+        print(f"Welcome email failed: {e}")
 
     return jsonify(user.to_dict()), 201
 
@@ -140,6 +137,67 @@ def delete_faculty(faculty_id):
         return jsonify({"error": f"Delete failed: {str(e)}"}), 500
 
 
+# ── Faculty Attendance (Lectures Conducted) ─────────────────────────────────
+
+@admin_bp.route("/faculty-attendance", methods=["GET"])
+@admin_required
+def faculty_attendance():
+    """
+    Returns for each faculty:
+    - Total scheduled slots per week
+    - Total unique dates attendance was marked (lectures conducted)
+    - Subjects taught
+    """
+    faculty_list = User.query.filter_by(role="faculty", is_active=True).all()
+    result = []
+
+    for faculty in faculty_list:
+        subjects = Subject.query.filter_by(faculty_id=faculty.id).all()
+        subject_stats = []
+        total_scheduled = 0
+        total_conducted = 0
+
+        for subject in subjects:
+            # Scheduled slots per week
+            slots = TimetableSlot.query.filter_by(
+                faculty_id=faculty.id, subject_id=subject.id
+            ).count()
+
+            # Unique dates attendance was marked by this faculty for this subject
+            conducted_dates = db.session.query(
+                db.func.count(db.func.distinct(Attendance.date))
+            ).filter_by(
+                faculty_id=faculty.id, subject_id=subject.id
+            ).scalar() or 0
+
+            # Total students enrolled
+            total_students = len(subject.students)
+
+            subject_stats.append({
+                "subject_id": subject.id,
+                "subject_name": subject.name,
+                "subject_code": subject.code,
+                "slots_per_week": slots,
+                "lectures_conducted": conducted_dates,
+                "total_students": total_students,
+            })
+            total_scheduled += slots
+            total_conducted += conducted_dates
+
+        result.append({
+            "faculty_id": faculty.id,
+            "faculty_name": faculty.name,
+            "faculty_email": faculty.email,
+            "department": faculty.department or "—",
+            "total_subjects": len(subjects),
+            "total_slots_per_week": total_scheduled,
+            "total_lectures_conducted": total_conducted,
+            "subjects": subject_stats,
+        })
+
+    return jsonify(result), 200
+
+
 # ── Subject Management ──────────────────────────────────────────────────────
 
 @admin_bp.route("/subjects", methods=["GET"])
@@ -153,9 +211,9 @@ def get_all_subjects():
 @admin_required
 def create_subject():
     data = request.get_json()
-    faculty_ids = data.get("faculty_ids", [])  # list of faculty ids
+    faculty_ids = data.get("faculty_ids", [])
     if not faculty_ids:
-        faculty_ids = [data.get("faculty_id")]  # backward compat
+        faculty_ids = [data.get("faculty_id")]
 
     created = []
     for fid in faculty_ids:
@@ -163,7 +221,7 @@ def create_subject():
             continue
         existing = Subject.query.filter_by(code=data["code"], faculty_id=fid).first()
         if existing:
-            continue  # skip duplicate
+            continue
         subject = Subject(
             name=data["name"],
             code=data["code"],
@@ -211,10 +269,6 @@ def delete_subject(subject_id):
 @admin_bp.route("/timetable/upload", methods=["POST"])
 @admin_required
 def upload_timetable():
-    """
-    Upload CSV/Excel timetable.
-    Expected columns: faculty_email, subject_code, day, start_time, end_time, room
-    """
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
@@ -231,28 +285,26 @@ def upload_timetable():
     except Exception as e:
         return jsonify({"error": f"Could not parse file: {str(e)}"}), 400
 
-    # Normalize column names
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
     required_cols = {"faculty_email", "subject_code", "day", "start_time", "end_time"}
     if not required_cols.issubset(set(df.columns)):
-        return jsonify({
-            "error": f"Missing columns. Required: {required_cols}"
-        }), 400
+        return jsonify({"error": f"Missing columns. Required: {required_cols}"}), 400
 
     valid_days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
     created, skipped, errors = 0, 0, []
 
     for _, row in df.iterrows():
         try:
-            # Fix: Excel often saves numbers as float (e.g. 123.0) — convert to clean string
             raw_email = str(row["faculty_email"]).strip().lower()
             raw_code = str(row["subject_code"]).strip()
-            # Remove .0 suffix if Excel converted code to float
             if raw_code.endswith(".0") and raw_code[:-2].isdigit():
                 raw_code = raw_code[:-2]
 
-            # Auto-create faculty if not found
+            if not raw_email or raw_email == 'nan':
+                skipped += 1
+                continue
+
             faculty = User.query.filter(User.email.ilike(raw_email)).first()
             if not faculty:
                 faculty = User(
@@ -266,13 +318,11 @@ def upload_timetable():
                 db.session.flush()
                 errors.append(f"Auto-created faculty: {raw_email} (password: faculty123)")
 
-            # Find subject by code AND faculty
             subject = Subject.query.filter(
                 Subject.code.ilike(raw_code),
                 Subject.faculty_id == faculty.id
             ).first()
 
-            # Auto-create subject if not found
             if not subject:
                 subject = Subject(
                     name=raw_code,
@@ -294,7 +344,6 @@ def upload_timetable():
             start_time = datetime.strptime(str(row["start_time"]).strip(), "%H:%M").time()
             end_time = datetime.strptime(str(row["end_time"]).strip(), "%H:%M").time()
 
-            # Check for duplicate
             existing = TimetableSlot.query.filter_by(
                 faculty_id=faculty.id,
                 subject_id=subject.id,
@@ -334,10 +383,6 @@ def upload_timetable():
 @admin_bp.route("/students/upload", methods=["POST"])
 @admin_required
 def upload_students():
-    """
-    Upload CSV/Excel student list.
-    Expected columns: name, roll_number, email, phone, semester, branch, subject_codes (comma separated)
-    """
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
 
@@ -364,6 +409,9 @@ def upload_students():
 
     for _, row in df.iterrows():
         try:
+            if not str(row.get("roll_number", "")).strip() or str(row.get("roll_number", "")).strip() == 'nan':
+                continue
+
             student = Student.query.filter_by(roll_number=str(row["roll_number"]).strip()).first()
 
             if not student:
@@ -381,37 +429,30 @@ def upload_students():
             else:
                 updated += 1
 
-            # Assign to subjects using faculty_email column + subject_codes
-            if "subject_codes" in row and pd.notna(row["subject_codes"]):
-                # Get faculty email from dedicated column if present
-                col_faculty_email = str(row.get("faculty_email", "")).strip().lower() if "faculty_email" in row and pd.notna(row.get("faculty_email")) else None
+            col_faculty_email = str(row.get("faculty_email", "")).strip().lower() if "faculty_email" in row and pd.notna(row.get("faculty_email")) else None
 
+            if "subject_codes" in row and pd.notna(row["subject_codes"]):
                 entries = [c.strip() for c in str(row["subject_codes"]).split(",")]
                 for entry in entries:
-                    if not entry:
+                    if not entry or entry == 'nan':
                         continue
-                    # Fix float codes from Excel (e.g. 123.0 → 123)
                     if entry.endswith(".0") and entry[:-2].isdigit():
                         entry = entry[:-2]
 
-                    # Check if format is "code:faculty_email" (inline)
                     if ":" in entry:
                         parts = entry.split(":", 1)
                         code = parts[0].strip()
                         faculty_email = parts[1].strip().lower()
                     elif col_faculty_email:
-                        # Use dedicated faculty_email column
                         code = entry
                         faculty_email = col_faculty_email
                     else:
-                        # No faculty specified — assign to ALL subjects with this code
                         subjects_list = Subject.query.filter(Subject.code.ilike(entry)).all()
                         for subject in subjects_list:
                             if student not in subject.students:
                                 subject.students.append(student)
                         continue
 
-                    # Find faculty and subject
                     faculty_user = User.query.filter(User.email.ilike(faculty_email)).first()
                     if faculty_user:
                         subject = Subject.query.filter(
@@ -440,11 +481,9 @@ def upload_students():
 @jwt_required()
 def send_defaulter_mails(subject_id):
     claims = get_jwt()
-    from flask_jwt_extended import get_jwt_identity
     user_id = int(get_jwt_identity())
 
-    from app import db as _db
-    subject = _db.session.get(Subject, subject_id)
+    subject = db.session.get(Subject, subject_id)
     if not subject:
         return jsonify({"error": "Subject not found"}), 404
     if claims.get("role") == "faculty" and subject.faculty_id != user_id:
@@ -453,7 +492,6 @@ def send_defaulter_mails(subject_id):
     students = subject.students
     sent, failed = 0, 0
 
-    # Get faculty name safely
     faculty_name = "Faculty"
     try:
         if subject.faculty:
@@ -469,7 +507,6 @@ def send_defaulter_mails(subject_id):
         present = sum(1 for r in records if r.status == "present")
         percentage = round((present / total * 100), 2) if total > 0 else 0.0
 
-        # Only send if at least 1 class was taken AND attendance < 75%
         if total > 0 and percentage < 75 and student.email:
             try:
                 msg = Message(
@@ -482,8 +519,7 @@ def send_defaulter_mails(subject_id):
                         f"which is below the required 75%.\n\n"
                         f"Classes attended: {present} / {total}\n\n"
                         f"Please ensure regular attendance to avoid academic consequences.\n\n"
-                        f"Regards,\n{faculty_name}\n"
-                        f"MIT-ADT University"
+                        f"Regards,\n{faculty_name}\nMIT-ADT University"
                     )
                 )
                 mail.send(msg)
@@ -495,9 +531,7 @@ def send_defaulter_mails(subject_id):
     if sent == 0 and failed == 0:
         return jsonify({"message": "No defaulters found — all students have attendance >= 75% or no classes taken yet"}), 200
 
-    return jsonify({
-        "message": f"Defaulter emails sent: {sent} sent, {failed} failed"
-    }), 200
+    return jsonify({"message": f"Defaulter emails sent: {sent} sent, {failed} failed"}), 200
 
 
 # ── Extra Lecture ───────────────────────────────────────────────────────────
@@ -506,16 +540,16 @@ def send_defaulter_mails(subject_id):
 @jwt_required()
 def add_extra_lecture():
     from app.models.extra_lecture import ExtraLecture
-    from flask_jwt_extended import get_jwt_identity
     user_id = int(get_jwt_identity())
     data = request.get_json()
 
-    subject = Subject.query.get_or_404(data["subject_id"])
+    subject = db.session.get(Subject, data["subject_id"])
+    if not subject:
+        return jsonify({"error": "Subject not found"}), 404
     claims = get_jwt()
     if claims.get("role") == "faculty" and subject.faculty_id != user_id:
         return jsonify({"error": "Access denied"}), 403
 
-    from datetime import datetime
     extra = ExtraLecture(
         faculty_id=user_id,
         subject_id=data["subject_id"],
