@@ -352,13 +352,37 @@ def upload_students():
                 updated += 1
 
             # Assign to subjects
+            # Format: "CSE4001:faculty@email.com" OR just "CSE4001" (assigns to first match)
             if "subject_codes" in row and pd.notna(row["subject_codes"]):
-                codes = [c.strip() for c in str(row["subject_codes"]).split(",")]
-                for code in codes:
+                entries = [c.strip() for c in str(row["subject_codes"]).split(",")]
+                for entry in entries:
+                    if not entry:
+                        continue
                     # Fix float codes from Excel (e.g. 123.0 → 123)
-                    if code.endswith(".0") and code[:-2].isdigit():
-                        code = code[:-2]
-                    subject = Subject.query.filter(Subject.code.ilike(code)).first()
+                    if entry.endswith(".0") and entry[:-2].isdigit():
+                        entry = entry[:-2]
+
+                    # Check if format is "code:faculty_email"
+                    if ":" in entry:
+                        parts = entry.split(":", 1)
+                        code = parts[0].strip()
+                        faculty_email = parts[1].strip().lower()
+                        faculty_user = User.query.filter(User.email.ilike(faculty_email)).first()
+                        if faculty_user:
+                            subject = Subject.query.filter(
+                                Subject.code.ilike(code),
+                                Subject.faculty_id == faculty_user.id
+                            ).first()
+                        else:
+                            subject = Subject.query.filter(Subject.code.ilike(code)).first()
+                    else:
+                        # No faculty specified — assign to ALL subjects with this code
+                        subjects_list = Subject.query.filter(Subject.code.ilike(entry)).all()
+                        for subject in subjects_list:
+                            if student not in subject.students:
+                                subject.students.append(student)
+                        continue
+
                     if subject and student not in subject.students:
                         subject.students.append(student)
 

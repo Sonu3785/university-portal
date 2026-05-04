@@ -360,12 +360,12 @@ function StudentUploadTab() {
   return (
     <UploadTab
       title="Upload Students"
-      description="Upload CSV/Excel. Use subject_codes column (comma-separated) to auto-enroll students in subjects."
+      description="Upload CSV/Excel. Use subject_codes column to enroll students. Format: 'CSE4001:faculty@email.com' to assign to specific faculty, or just 'CSE4001' to assign to all faculty with that code."
       endpoint="/admin/students/upload"
       templateCols={["name","roll_number","email","phone","semester","branch","subject_codes"]}
       sampleRows={[
-        ["Aarav Sharma","CS2024001","aarav@student.edu","9000000001","3","CSE","CS301,CS302"],
-        ["Priya Patel","CS2024002","priya@student.edu","9000000002","3","CSE","CS301,CS302,CS303"]
+        ["Aarav Sharma","CS2024001","aarav@student.edu","9000000001","4","CSE","CSE4001:prathameshsurve3785@gmail.com,CSE4002:amitnishankar@gmail.com"],
+        ["Priya Patel","CS2024002","priya@student.edu","9000000002","4","CSE","CSE4001:amitnishankar@gmail.com,CSE4003:shahin@gmail.com"]
       ]}
     />
   )
