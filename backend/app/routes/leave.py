@@ -67,7 +67,7 @@ def leave_action(leave_id):
     db.session.commit()
 
     # Send email notification to faculty
-    faculty = User.query.get(leave.faculty_id)
+    faculty = db.session.get(User, leave.faculty_id)
     if faculty:
         # Create in-app notification
         from app.models.notification import Notification
