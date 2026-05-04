@@ -5,8 +5,7 @@ import { useReminderNotifications } from '../hooks/useReminderNotifications'
 import NotificationBell from './NotificationBell'
 import {
   LayoutDashboard, CalendarDays, ClipboardList,
-  BarChart3, FileText, Bell, LogOut, ShieldCheck, BookMarked,
-  Menu, X
+  BarChart3, Bell, LogOut, ShieldCheck, BookMarked, Menu, X
 } from 'lucide-react'
 
 const navItems = [
@@ -15,7 +14,6 @@ const navItems = [
   { to: '/attendance', label: 'Attendance', icon: ClipboardList },
   { to: '/marks', label: 'CA/TA Marks', icon: BookMarked },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/leave', label: 'Leave', icon: FileText },
   { to: '/reminders', label: 'Reminders', icon: Bell },
 ]
 
