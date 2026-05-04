@@ -137,18 +137,36 @@ function SubjectsTab() {
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
-  const [form, setForm] = useState({ name: "", code: "", faculty_id: "", semester: "", branch: "" })
+  const [form, setForm] = useState({ name: "", code: "", faculty_ids: [], semester: "", branch: "" })
   const { data: subjects = [], isLoading } = useQuery({ queryKey: ["all-subjects"], queryFn: () => api.get("/admin/subjects").then(r => r.data) })
   const { data: faculty = [] } = useQuery({ queryKey: ["all-faculty"], queryFn: () => api.get("/admin/faculty").then(r => r.data) })
 
+  const toggleFaculty = (id) => {
+    setForm(prev => ({
+      ...prev,
+      faculty_ids: prev.faculty_ids.includes(id)
+        ? prev.faculty_ids.filter(f => f !== id)
+        : [...prev.faculty_ids, id]
+    }))
+  }
+
   const createMutation = useMutation({
     mutationFn: () => {
-      if (!form.name || !form.code || !form.faculty_id) {
-        throw new Error("Subject Name, Code and Faculty are required")
-      }
-      return api.post("/admin/subjects", { ...form, semester: parseInt(form.semester) || null })
+      if (!form.name || !form.code) throw new Error("Subject Name and Code are required")
+      if (form.faculty_ids.length === 0) throw new Error("Select at least one faculty")
+      return api.post("/admin/subjects", {
+        name: form.name, code: form.code,
+        faculty_ids: form.faculty_ids,
+        semester: parseInt(form.semester) || null,
+        branch: form.branch
+      })
     },
-    onSuccess: () => { toast.success("Subject created!"); qc.invalidateQueries(["all-subjects"]); setShowForm(false); setForm({ name: "", code: "", faculty_id: "", semester: "", branch: "" }) },
+    onSuccess: (res) => {
+      toast.success(res.data.message)
+      qc.invalidateQueries(["all-subjects"])
+      setShowForm(false)
+      setForm({ name: "", code: "", faculty_ids: [], semester: "", branch: "" })
+    },
     onError: (err) => toast.error(err.response?.data?.error || err.message || "Failed")
   })
 
@@ -174,25 +192,45 @@ function SubjectsTab() {
         </button>
       </div>
       {showForm && (
-        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[{label:"Subject Name *",key:"name",type:"text"},{label:"Subject Code *",key:"code",type:"text"},{label:"Semester",key:"semester",type:"number"},{label:"Branch",key:"branch",type:"text"}].map(({ label, key, type }) => (
-            <div key={key}>
-              <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
-              <input required={label.includes("*")} type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-          ))}
+        <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mb-5 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {[{label:"Subject Name *",key:"name",type:"text"},{label:"Subject Code *",key:"code",type:"text"},{label:"Semester",key:"semester",type:"number"},{label:"Branch",key:"branch",type:"text"}].map(({ label, key, type }) => (
+              <div key={key}>
+                <label className="text-xs font-medium text-slate-600 mb-1 block">{label}</label>
+                <input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            ))}
+          </div>
+          {/* Multi-faculty selector */}
           <div>
-            <label className="text-xs font-medium text-slate-600 mb-1 block">Assign Faculty</label>
-            <select value={form.faculty_id} onChange={e => setForm({ ...form, faculty_id: e.target.value })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="">Select faculty</option>
-              {faculty.map(f => <option key={f.id} value={f.id}>{f.name} — {f.department}</option>)}
-            </select>
+            <label className="text-xs font-medium text-slate-600 mb-2 block">
+              Assign Faculty * <span className="text-slate-400 font-normal">(select multiple)</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto border border-slate-200 rounded-xl p-3 bg-white">
+              {faculty.length === 0 ? (
+                <p className="text-slate-400 text-xs col-span-2">No faculty added yet</p>
+              ) : faculty.map(f => (
+                <label key={f.id} className={"flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors " + (form.faculty_ids.includes(f.id) ? "bg-indigo-50 border border-indigo-200" : "hover:bg-slate-50 border border-transparent")}>
+                  <input
+                    type="checkbox"
+                    checked={form.faculty_ids.includes(f.id)}
+                    onChange={() => toggleFaculty(f.id)}
+                    className="w-4 h-4 accent-indigo-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-slate-700">{f.name}</p>
+                    <p className="text-xs text-slate-400">{f.email}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            {form.faculty_ids.length > 0 && (
+              <p className="text-xs text-indigo-600 mt-1 font-semibold">{form.faculty_ids.length} faculty selected</p>
+            )}
           </div>
-          <div className="col-span-2">
-            <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-xl text-sm">
-              {createMutation.isPending ? "Creating..." : "Create Subject"}
-            </button>
-          </div>
+          <button onClick={() => createMutation.mutate()} disabled={createMutation.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-2 rounded-xl text-sm">
+            {createMutation.isPending ? "Creating..." : `Assign to ${form.faculty_ids.length || 0} Faculty`}
+          </button>
         </div>
       )}
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">

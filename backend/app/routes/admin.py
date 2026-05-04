@@ -123,23 +123,32 @@ def get_all_subjects():
 @admin_required
 def create_subject():
     data = request.get_json()
-    # Allow same code for different faculty, but not same code+faculty combo
-    existing = Subject.query.filter_by(
-        code=data["code"], faculty_id=data["faculty_id"]
-    ).first()
-    if existing:
-        return jsonify({"error": "This subject code is already assigned to this faculty"}), 400
+    faculty_ids = data.get("faculty_ids", [])  # list of faculty ids
+    if not faculty_ids:
+        faculty_ids = [data.get("faculty_id")]  # backward compat
 
-    subject = Subject(
-        name=data["name"],
-        code=data["code"],
-        faculty_id=data["faculty_id"],
-        semester=data.get("semester"),
-        branch=data.get("branch"),
-    )
-    db.session.add(subject)
+    created = []
+    for fid in faculty_ids:
+        if not fid:
+            continue
+        existing = Subject.query.filter_by(code=data["code"], faculty_id=fid).first()
+        if existing:
+            continue  # skip duplicate
+        subject = Subject(
+            name=data["name"],
+            code=data["code"],
+            faculty_id=fid,
+            semester=data.get("semester"),
+            branch=data.get("branch"),
+        )
+        db.session.add(subject)
+        created.append(fid)
+
+    if not created:
+        return jsonify({"error": "Subject already assigned to all selected faculty"}), 400
+
     db.session.commit()
-    return jsonify(subject.to_dict()), 201
+    return jsonify({"message": f"Subject '{data['code']}' assigned to {len(created)} faculty"}), 201
 
 
 @admin_bp.route("/subjects/<int:subject_id>", methods=["DELETE"])
