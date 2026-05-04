@@ -1,11 +1,11 @@
-name,roll_number,email,phone,semester,branch,subject_codes
-Aarav Sharma,CS2024001,aarav.sharma@student.edu,9000000001,4,CSE,CSE4001:prathameshsurve3785@gmail.com,CSE4002:amitnishankar@gmail.com
-Priya Patel,CS2024002,priya.patel@student.edu,9000000002,4,CSE,CSE4001:amitnishankar@gmail.com,CSE4003:shahin@gmail.com
-Rohan Gupta,CS2024003,rohan.gupta@student.edu,9000000003,4,CSE,CSE4001:shahin@gmail.com,CSE4004:prathameshsurve3785@gmail.com
-Sneha Reddy,CS2024004,sneha.reddy@student.edu,9000000004,4,CSE,CSE4002:prathameshsurve3785@gmail.com,CSE4005:amitnishankar@gmail.com
-Vikram Singh,CS2024005,vikram.singh@student.edu,9000000005,4,CSE,CSE4003:prathameshsurve3785@gmail.com,CSE4001:amitnishankar@gmail.com
-Ananya Iyer,CS2024006,ananya.iyer@student.edu,9000000006,4,CSE,CSE4004:amitnishankar@gmail.com,CSE4002:shahin@gmail.com
-Karthik Nair,CS2024007,karthik.nair@student.edu,9000000007,4,CSE,CSE4005:shahin@gmail.com,CSE4003:amitnishankar@gmail.com
-Meera Joshi,CS2024008,meera.joshi@student.edu,9000000008,4,CSE,CSE4001:prathameshsurve3785@gmail.com,CSE4004:shahin@gmail.com
-Arjun Desai,CS2024009,arjun.desai@student.edu,9000000009,4,CSE,CSE4002:amitnishankar@gmail.com,CSE4005:prathameshsurve3785@gmail.com
-Kavya Menon,CS2024010,kavya.menon@student.edu,9000000010,4,CSE,CSE4003:shahin@gmail.com,CSE4001:shahin@gmail.com
+name,roll_number,email,phone,semester,branch,subject_codes,faculty_email
+Aarav Sharma,CS2024001,aarav.sharma@student.edu,9000000001,4,CSE,CSE4001,prathameshsurve3785@gmail.com
+Priya Patel,CS2024002,priya.patel@student.edu,9000000002,4,CSE,CSE4001,amitnishankar@gmail.com
+Rohan Gupta,CS2024003,rohan.gupta@student.edu,9000000003,4,CSE,CSE4001,shahin@gmail.com
+Sneha Reddy,CS2024004,sneha.reddy@student.edu,9000000004,4,CSE,CSE4002,prathameshsurve3785@gmail.com
+Vikram Singh,CS2024005,vikram.singh@student.edu,9000000005,4,CSE,CSE4002,amitnishankar@gmail.com
+Ananya Iyer,CS2024006,ananya.iyer@student.edu,9000000006,4,CSE,CSE4002,shahin@gmail.com
+Karthik Nair,CS2024007,karthik.nair@student.edu,9000000007,4,CSE,CSE4003,prathameshsurve3785@gmail.com
+Meera Joshi,CS2024008,meera.joshi@student.edu,9000000008,4,CSE,CSE4003,amitnishankar@gmail.com
+Arjun Desai,CS2024009,arjun.desai@student.edu,9000000009,4,CSE,CSE4003,shahin@gmail.com
+Kavya Menon,CS2024010,kavya.menon@student.edu,9000000010,4,CSE,CSE4004,prathameshsurve3785@gmail.com

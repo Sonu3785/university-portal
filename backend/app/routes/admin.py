@@ -351,9 +351,11 @@ def upload_students():
             else:
                 updated += 1
 
-            # Assign to subjects
-            # Format: "CSE4001:faculty@email.com" OR just "CSE4001" (assigns to first match)
+            # Assign to subjects using faculty_email column + subject_codes
             if "subject_codes" in row and pd.notna(row["subject_codes"]):
+                # Get faculty email from dedicated column if present
+                col_faculty_email = str(row.get("faculty_email", "")).strip().lower() if "faculty_email" in row and pd.notna(row.get("faculty_email")) else None
+
                 entries = [c.strip() for c in str(row["subject_codes"]).split(",")]
                 for entry in entries:
                     if not entry:
@@ -362,19 +364,15 @@ def upload_students():
                     if entry.endswith(".0") and entry[:-2].isdigit():
                         entry = entry[:-2]
 
-                    # Check if format is "code:faculty_email"
+                    # Check if format is "code:faculty_email" (inline)
                     if ":" in entry:
                         parts = entry.split(":", 1)
                         code = parts[0].strip()
                         faculty_email = parts[1].strip().lower()
-                        faculty_user = User.query.filter(User.email.ilike(faculty_email)).first()
-                        if faculty_user:
-                            subject = Subject.query.filter(
-                                Subject.code.ilike(code),
-                                Subject.faculty_id == faculty_user.id
-                            ).first()
-                        else:
-                            subject = Subject.query.filter(Subject.code.ilike(code)).first()
+                    elif col_faculty_email:
+                        # Use dedicated faculty_email column
+                        code = entry
+                        faculty_email = col_faculty_email
                     else:
                         # No faculty specified — assign to ALL subjects with this code
                         subjects_list = Subject.query.filter(Subject.code.ilike(entry)).all()
@@ -382,6 +380,16 @@ def upload_students():
                             if student not in subject.students:
                                 subject.students.append(student)
                         continue
+
+                    # Find faculty and subject
+                    faculty_user = User.query.filter(User.email.ilike(faculty_email)).first()
+                    if faculty_user:
+                        subject = Subject.query.filter(
+                            Subject.code.ilike(code),
+                            Subject.faculty_id == faculty_user.id
+                        ).first()
+                    else:
+                        subject = Subject.query.filter(Subject.code.ilike(code)).first()
 
                     if subject and student not in subject.students:
                         subject.students.append(student)
