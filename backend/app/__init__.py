@@ -23,17 +23,25 @@ def create_app():
     # Build DB URI — support full DATABASE_URL or individual parts
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Railway sometimes provides full URL
         if database_url.startswith("mysql://"):
             database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
         app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     else:
+        ssl_mode = os.getenv("DB_SSL", "false").lower()
+        if ssl_mode == "true":
+            ssl_args = "?ssl_ca=/etc/ssl/certs/ca-certificates.crt"
+        else:
+            ssl_args = ""
         app.config["SQLALCHEMY_DATABASE_URI"] = (
             f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
             f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', 3306)}/{os.getenv('DB_NAME')}"
-            f"?ssl_disabled=true"
+            f"{ssl_args}"
         )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,
+        "pool_recycle": 300,
+    }
 
     # Mail config
     app.config["MAIL_SERVER"] = "smtp.gmail.com"
