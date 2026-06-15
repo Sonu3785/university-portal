@@ -20,25 +20,36 @@ def create_app():
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret")
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "jwt-secret")
 
-    # Build DB URI — support full DATABASE_URL or individual parts
+    # Build DB URI
     database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        if database_url.startswith("mysql://"):
-            database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
-        app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    else:
-        db_ssl = os.getenv("DB_SSL", "false").lower() == "true"
-        app.config["SQLALCHEMY_DATABASE_URI"] = (
-            f"mysql+pymysql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
-            f"@{os.getenv('DB_HOST')}:{os.getenv('DB_PORT', 3306)}/{os.getenv('DB_NAME')}"
-        )
+    db_host = os.getenv('DB_HOST', 'localhost')
+    db_port = os.getenv('DB_PORT', '3306')
+    db_user = os.getenv('DB_USER', 'root')
+    db_pass = os.getenv('DB_PASSWORD', '')
+    db_name = os.getenv('DB_NAME', 'university_portal')
+    db_ssl  = os.getenv('DB_SSL', 'false').lower() == 'true'
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = (
+        f"mysql+pymysql://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}"
+    )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+    # SSL connect args
+    ssl_args = {}
+    if db_ssl:
+        import os as _os
+        cert_path = _os.path.join(_os.path.dirname(__file__), '..', 'aiven-ca.crt')
+        cert_path = _os.path.abspath(cert_path)
+        if _os.path.exists(cert_path):
+            ssl_args = {"ssl": {"ca": cert_path}}
+        else:
+            # fallback — disable cert verification
+            ssl_args = {"ssl": {"ssl_disabled": False}}
+
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
         "pool_pre_ping": True,
         "pool_recycle": 300,
-        "connect_args": {
-            "ssl": {"ssl_disabled": False} if os.getenv("DB_SSL", "false").lower() == "true" else {}
-        }
+        "connect_args": ssl_args
     }
 
     # Mail config
